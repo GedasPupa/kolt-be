@@ -77,10 +77,12 @@ app.delete("/scooters/:id", (req, res) => {
 // CREATE scooter:
 app.post("/scooters", (req, res) => {
     connection.query(
-        "INSERT INTO scooters (`registration_code`, `is_busy`) VALUES (?, ?)",
+        "INSERT INTO scooters (`registration_code`, `is_busy`, `last_use_time`, `total_ride_kilometers`) VALUES (?, ?, ?, ?)",
         [
             req.body.registration_code,
             req.body.is_busy,
+            req.body.last_use_time,
+            req.body.total_ride_kilometers,
         ],
         (err, rows, field) => {
             if (err) throw err;
@@ -113,7 +115,7 @@ app.put("/scooters/:id", (req, res) => {
 app.get("/total", (req, res) => {
     connection.query("SELECT count(*) as total_scooters FROM scooters", (err, rows, fields) => {
         if (err) throw err;
-        console.log("Total kilometers: ", rows[0].total_scooters);
+        console.log("Total scooters: ", rows[0].total_scooters);
         res.status(200).send({ total_scooters: rows[0].total_scooters });
     });
 });
