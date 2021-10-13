@@ -109,8 +109,24 @@ app.put("/scooters/:id", (req, res) => {
     ); 
 });
 
+// TOTAL scooters:
+app.get("/total", (req, res) => {
+    connection.query("SELECT count(*) as total_scooters FROM scooters", (err, rows, fields) => {
+        if (err) throw err;
+        console.log("Total kilometers: ", rows[0].total_scooters);
+        res.status(200).send({ total_scooters: rows[0].total_scooters });
+    });
+});
+
+// TOTAL kilometers:
+app.get("/kilometers", (req, res) => {
+    connection.query("SELECT sum(total_ride_kilometers) as total_kilometers FROM scooters", (err, rows, fields) => {
+        if (err) throw err;
+        console.log("Total kilometers: ", rows[0].total_kilometers);
+        res.status(200).send({ total_kilometers: rows[0].total_kilometers });
+    });
+});
+
 app.listen(port, () =>
     console.log(`Port: ${port}!`)
 );
-
-
