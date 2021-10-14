@@ -44,7 +44,18 @@ app.get("/test-conn", (req, res) => {
 // GET all scooters:
 app.get("/scooters", (req, res) => {
     connection.query("SELECT * FROM scooters", (err, rows, fields) => {
-        if (err) throw err;
+        if (err) {
+            console.log(err.message);
+            return res.status(500).send({
+                error_code: err.code,
+                error_message: err.sqlMessage,
+            });
+        };
+        try {
+            console.log('Nice! You got all', rows.length, 'scooters!');
+        } catch (err) {
+            console.log(err.message);
+        };
         res.status(200).send(rows);
     });
 });
@@ -55,7 +66,25 @@ app.get("/scooters/:id", (req, res) => {
         "SELECT * FROM scooters WHERE id = ?",
         req.params.id,
         (err, rows, fields) => {
-            if (err) throw err;
+            // console.log({...fields});
+            if (err) {
+                console.log(err.message);
+                return res.status(500).send({
+                    error_code: err.code,
+                    error_message: err.sqlMessage,
+                });
+            };
+            try {
+                console.log('You got scooter with id: ', rows[0].id);
+            } catch (err) {
+                console.log(`Scooter with id ${req.params.id} not found!`);
+            };
+            if (rows.length === 0) {
+                return res.status(404).send({
+                    id: +req.params.id,
+                    error_message: 'Record not found'
+                });
+            }
             res.status(200).send(rows);
         }
     );
@@ -67,9 +96,22 @@ app.delete("/scooters/:id", (req, res) => {
         "DELETE FROM scooters WHERE id = ? ",
         req.params.id,
         (err, rows, field) => {
-            if (err) throw err;
-            console.log("deleted: ", rows);
-            res.status(204).send();
+            if (err) {
+                console.log(err.message);
+                return res.status(500).send({
+                    error_code: err.code,
+                    error_message: err.sqlMessage,
+                });
+            };
+            console.log("Deleted rows:", rows.affectedRows);
+            if (!rows.affectedRows) return res.status(404).send({
+                id: +req.params.id,
+                error_message: 'Record not found'
+            });
+            res.status(204).send({
+                id: +req.params.id,
+                message: `Record with id ${req.params.id} deleted`
+            });
         }
     );
 });
@@ -77,7 +119,7 @@ app.delete("/scooters/:id", (req, res) => {
 // CREATE scooter:
 app.post("/scooters", (req, res) => {
     connection.query(
-        "INSERT INTO scooters (`registration_code`, `is_busy`, `last_use_time`, `total_ride_kilometers`) VALUES (?, ?, ?, ?)",
+        "INSERT INTO scooters (registration_code, is_busy, last_use_time, total_ride_kilometers) VALUES (?, ?, ?, ?)",
         [
             req.body.registration_code,
             req.body.is_busy,
@@ -85,7 +127,13 @@ app.post("/scooters", (req, res) => {
             req.body.total_ride_kilometers,
         ],
         (err, rows, field) => {
-            if (err) throw err;
+            if (err) {
+                console.log(err.message);
+                return res.status(500).send({
+                    error_code: err.code,
+                    error_message: err.sqlMessage,
+                });
+            };
             console.log("created: ", { id: rows.insertId, ...req.body });
             res.status(201).send({ id: rows.insertId, ...req.body });
         }
@@ -104,9 +152,22 @@ app.put("/scooters/:id", (req, res) => {
             req.params.id,
         ],
         (err, rows, field) => {
-            if (err) throw err;
-            console.log("updated: ", { rows });
-            res.status(201).send({id: parseInt(req.params.id), ...req.body});
+            if (err) {
+                console.log(err.message);n
+                return res.status(500).send({
+                    error_code: err.code,
+                    error_message: err.sqlMessage,
+                });
+            };
+            console.log("Updated rows:", rows === undefined ? 0 : rows.affectedRows);
+            if (!rows.affectedRows) {
+                console.log(`Record with id ${req.params.id} not found!`);
+                return res.status(404).send({
+                    id: +req.params.id,
+                    error_message: 'Record not found'
+                });
+            }
+            res.status(201).send({id: +req.params.id, ...req.body});
         }
     ); 
 });
@@ -114,7 +175,13 @@ app.put("/scooters/:id", (req, res) => {
 // TOTAL scooters:
 app.get("/total", (req, res) => {
     connection.query("SELECT count(*) as total_scooters FROM scooters", (err, rows, fields) => {
-        if (err) throw err;
+        if (err) {
+            console.log(err.message);
+            return res.status(500).send({
+                error_code: err.code,
+                error_message: err.sqlMessage,
+            });
+        };
         console.log("Total scooters: ", rows[0].total_scooters);
         res.status(200).send({ total_scooters: rows[0].total_scooters });
     });
@@ -123,7 +190,13 @@ app.get("/total", (req, res) => {
 // TOTAL kilometers:
 app.get("/kilometers", (req, res) => {
     connection.query("SELECT sum(total_ride_kilometers) as total_kilometers FROM scooters", (err, rows, fields) => {
-        if (err) throw err;
+        if (err) {
+            console.log(err.message);
+            return res.status(500).send({
+                error_code: err.code,
+                error_message: err.sqlMessage,
+            });
+        };
         console.log("Total kilometers: ", rows[0].total_kilometers);
         res.status(200).send({ total_kilometers: rows[0].total_kilometers });
     });
