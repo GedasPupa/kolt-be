@@ -1,6 +1,7 @@
 import express from "express";
 import mysql from "mysql";
 import cors from 'cors';
+import { check, validationResult  } from "express-validator";
 
 const port = 3000;
 const app = express();
@@ -117,60 +118,94 @@ app.delete("/scooters/:id", (req, res) => {
 });
 
 // CREATE scooter:
-app.post("/scooters", (req, res) => {
-    connection.query(
-        "INSERT INTO scooters (registration_code, is_busy, last_use_time, total_ride_kilometers) VALUES (?, ?, ?, ?)",
-        [
-            req.body.registration_code,
-            req.body.is_busy,
-            req.body.last_use_time,
-            req.body.total_ride_kilometers,
-        ],
-        (err, rows, field) => {
-            if (err) {
-                console.log(err.message);
-                return res.status(500).send({
-                    error_code: err.code,
-                    error_message: err.sqlMessage,
-                });
-            };
-            console.log("created: ", { id: rows.insertId, ...req.body });
-            res.status(201).send({ id: rows.insertId, ...req.body });
+app.post(
+    "/scooters",
+
+    //validation:
+    check("registration_code").isLength({min: 8, max: 8}).withMessage("Registration code must be 8 characters long!"),
+    check("is_busy").custom(value => (value == 0 || value == 1) ? true : false).withMessage("'is_busy' field must be 0 or 1!"),
+    check("last_use_time").isISO8601().toDate().withMessage("Not valid date format! Please enter: 'YYYY-MM-DD'."),
+    check("total_ride_kilometers").custom(value => (value >= 0 && value <= 9999.99) ? true : false).withMessage("Min: 0 km, max: 9999.99 km!"),
+    
+    (req, res) => {
+        // validation:
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            console.log(errors.errors[0].msg);
+            return res.status(400).json(errors);
         }
-    );
-});
+        // query to DB:
+        connection.query(
+            "INSERT INTO scooters (registration_code, is_busy, last_use_time, total_ride_kilometers) VALUES (?, ?, ?, ?)",
+            [
+                req.body.registration_code,
+                req.body.is_busy,
+                req.body.last_use_time,
+                req.body.total_ride_kilometers,
+            ],
+            (err, rows, field) => {
+                if (err) {
+                    console.log(err.message);
+                    return res.status(500).send({
+                        error_code: err.code,
+                        error_message: err.sqlMessage,
+                    });
+                };
+                console.log("created: ", { id: rows.insertId, ...req.body });
+                res.status(201).send({ id: rows.insertId, ...req.body });
+            }
+        );
+    }
+);
 
 // UPDATE scooter:
-app.put("/scooters/:id", (req, res) => {
-    connection.query(
-        "UPDATE scooters SET registration_code = ?, is_busy = ?, last_use_time = ?, total_ride_kilometers = ? WHERE id = ?",
-        [
-            req.body.registration_code,
-            req.body.is_busy,
-            req.body.last_use_time,
-            req.body.total_ride_kilometers,
-            req.params.id,
-        ],
-        (err, rows, field) => {
-            if (err) {
-                console.log(err.message);n
-                return res.status(500).send({
-                    error_code: err.code,
-                    error_message: err.sqlMessage,
-                });
-            };
-            console.log("Updated rows:", rows === undefined ? 0 : rows.affectedRows);
-            if (!rows.affectedRows) {
-                console.log(`Record with id ${req.params.id} not found!`);
-                return res.status(404).send({
-                    id: +req.params.id,
-                    error_message: 'Record not found'
-                });
-            }
-            res.status(201).send({id: +req.params.id, ...req.body});
+app.put(
+    "/scooters/:id",
+
+    //validation:
+    check("registration_code").isLength({min: 8, max: 8}).withMessage("Registration code must be 8 characters long!"),
+    check("is_busy").custom(value => (value == 0 || value == 1) ? true : false).withMessage("'is_busy' field must be 0 or 1!"),
+    check("last_use_time").isISO8601().toDate().withMessage("Not valid date format! Please enter: 'YYYY-MM-DD'."),
+    check("total_ride_kilometers").custom(value => (value >= 0 && value <= 9999.99) ? true : false).withMessage("Min: 0 km, max: 9999.99 km!"),
+
+    (req, res) => {
+        // validation:
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            console.log(errors.errors[0].msg);
+            return res.status(400).json(errors);
         }
-    ); 
-});
+        // query to DB:
+        connection.query(
+            "UPDATE scooters SET registration_code = ?, is_busy = ?, last_use_time = ?, total_ride_kilometers = ? WHERE id = ?",
+            [
+                req.body.registration_code,
+                req.body.is_busy,
+                req.body.last_use_time,
+                req.body.total_ride_kilometers,
+                req.params.id,
+            ],
+            (err, rows, field) => {
+                if (err) {
+                    console.log(err.message);
+                    return res.status(500).send({
+                        error_code: err.code,
+                        error_message: err.sqlMessage,
+                    });
+                };
+                console.log("Updated rows:", rows === undefined ? 0 : rows.affectedRows);
+                if (!rows.affectedRows) {
+                    console.log(`Record with id ${req.params.id} not found!`);
+                    return res.status(404).send({
+                        id: +req.params.id,
+                        error_message: 'Record not found'
+                    });
+                }
+                res.status(201).send({id: +req.params.id, ...req.body});
+            }
+        ); 
+    }
+);
 
 // TOTAL scooters:
 app.get("/total", (req, res) => {
